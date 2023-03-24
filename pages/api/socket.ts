@@ -17,12 +17,21 @@ interface NextApiResponseWithSocket extends NextApiResponse {
 }
 
 export default function SocketHandler(req: NextApiRequest, res: NextApiResponseWithSocket) {
+  if (res.socket.server.io) {
+    console.log("Already set up")
+    res.end()
+    return
+  }
+
   const io = new Server(res.socket.server)
   res.socket.server.io = io
 
   io.on("connection", (socket) => {
-    // after the connection.....
+    socket.on("send-message", (obj) => {
+      io.emit("receive-message", obj)
+    })
   })
 
   console.log("Setting up socket")
+  res.end()
 }
