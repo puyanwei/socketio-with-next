@@ -16,22 +16,30 @@ interface NextApiResponseWithSocket extends NextApiResponse {
   socket: SocketWithIO
 }
 
+interface State {
+  message: string
+  name: string
+}
+
+const state: State[] | [] = []
+
 export default function SocketHandler(req: NextApiRequest, res: NextApiResponseWithSocket) {
   if (res.socket.server.io) {
-    console.log("Already set up")
-    res.end()
-    return
+    console.log("Socket is already running")
+  } else {
+    console.log("Socket is initializing")
+    const io = new Server(res.socket.server)
+    res.socket.server.io = io
+
+    io.on("connection", (socket) => {
+      socket.on("addMessage", (message, name) => {
+        if (message !== typeof "string") return
+        if (name !== typeof "string") return
+        state.push({ message, name })
+        socket.broadcast.emit("allMessages", state)
+      })
+    })
   }
 
-  const io = new Server(res.socket.server)
-  res.socket.server.io = io
-
-  io.on("connection", (socket) => {
-    socket.on("send-message", (obj) => {
-      io.emit("receive-message", obj)
-    })
-  })
-
-  console.log("Setting up socket")
   res.end()
 }
